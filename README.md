@@ -1,3 +1,6 @@
+[![rebol-deflate](https://github.com/user-attachments/assets/4ed5a794-6a7f-472a-b958-9bc5f0a1f545)](https://github.com/Oldes/Rebol-Deflate)
+
+[![Rebol-Deflate CI](https://github.com/Oldes/Rebol-Deflate/actions/workflows/main.yml/badge.svg)](https://github.com/Oldes/Rebol-Deflate/actions/workflows/main.yml)
 [![Gitter](https://badges.gitter.im/rebol3/community.svg)](https://app.gitter.im/#/room/#Rebol3:gitter.im)
 [![Zulip](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://rebol.zulipchat.com/)
 
