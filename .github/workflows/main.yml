@@ -60,10 +60,10 @@ jobs:
       uses: oldes/install-siskin@v0.21.0
 
     - name: Build AMD64 Rebol/Deflate extension
-      run: ./siskin Rebol-Deflate.nest -o ./deflate-macos-x64.rebx --gzip --xcode deflate-macos-x64
+      run: ./siskin Rebol-Deflate.nest -o ./deflate-macos-x64.rebx --gzip deflate-macos-x64
 
     - name: Build ARM64 Rebol/Deflate extension
-      run: ./siskin Rebol-Deflate.nest -o ./deflate-macos-arm64.rebx --gzip --xcode deflate-macos-arm64
+      run: ./siskin Rebol-Deflate.nest -o ./deflate-macos-arm64.rebx --gzip deflate-macos-arm64
 
     - name: Minimal Rebol/Deflate extension test
       run:  ./siskin --script ci-test.r3
