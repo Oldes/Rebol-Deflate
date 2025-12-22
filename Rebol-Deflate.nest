@@ -108,11 +108,17 @@ eggs: [
 			cmd %_static_x86/ "cmake ../libdeflate/ -A Win32 -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF"
 			cmd %_static_x86/ {cmake --build . --config release -j 8}
 		]
-		"Make Brotli static library (cmake) - x64" [
+		"Make deflate static library (cmake) - x64" [
 			arch: x64
 			name: %static-lib-x64
 			cmd %_static_x64/ "cmake ../libdeflate/ -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF"
 			cmd %_static_x64/ {cmake --build . --config release -j 8}
+		]
+		"Make deflate static library (cmake) - arm64" [
+			arch: arm64
+			name: %static-lib-arm64
+			cmd %_static_arm64/ "cmake ../libdeflate/ -A ARM64 -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF"
+			cmd %_static_arm64/ {cmake --build . --config release -j 8}
 		]
 		"Rebol deflate extension: win32_x86" [
 			name: %deflate-windows-x86
@@ -127,6 +133,13 @@ eggs: [
 			:r3-extension
 			:deflate-src
 			file: %x86/cpu_features.c
+		]
+		"Rebol deflate extension: arm64" [
+			name: %deflate-windows-arm64
+			:target-arm64
+			:r3-extension
+			:deflate-src
+			file: %arm/cpu_features.c
 		]
 	]
 	#if macOS? [
