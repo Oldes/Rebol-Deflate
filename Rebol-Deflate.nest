@@ -152,7 +152,14 @@ eggs: [
 			cmd %_static_nix_x64/ "cmake ../libdeflate/ -DLIBDEFLATE_BUILD_SHARED_LIB=OFF -DLIBDEFLATE_BUILD_STATIC_LIB=ON -DCMAKE_VERBOSE_MAKEFILE=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
 			cmd %_static_nix_x64/ {cmake --build . --config release -j 8}
 		]
-		"Rebol deflate extension:linux_x64" [
+		"Rebol deflate extension: linux_x86" [
+			name: %deflate-linux-x86
+			:r3-extension
+			:deflate-src
+			:target-x86
+			file: %x86/cpu_features.c
+		]
+		"Rebol deflate extension: linux_x64" [
 			name: %deflate-linux-x64
 			:r3-extension
 			:deflate-src
