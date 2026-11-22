@@ -1,11 +1,11 @@
-;-    .-.                                                                       
-;-   /'v'\   SISKIN-Builder project file                                        
-;-  (/uOu\)  https://github.com/Siskin-framework/Builder/                       
+;-    .-.
+;-   /'v'\   SISKIN-Builder project file
+;-  (/uOu\)  https://github.com/Siskin-framework/Builder/
 ;-===="="=======================================================================
 
-github: @libdeflate
+github: ebiggers/libdeflate
 
-version: 0.1.0
+version: 1.26.0
 
 compiler: clang
 arch:     x64
@@ -14,178 +14,211 @@ optimize: 2
 ;define: USE_TRACES
 
 ;- options common for all Rebol extensions ----------------------
-flag:   shared
-
 #if Windows? [
-	define: _CRT_SECURE_NO_WARNINGS
 	define: TO_WINDOWS
+	define: _CRT_SECURE_NO_WARNINGS
+	set-env CMAKE_GEN: {-G "Visual Studio 17 2022"}
+]
+#if macOS?   [
+	define: TO_OSX
+	define: HAS_BOOL
+	set-env CMAKE_GEN: ""
 ]
 #if Linux? [
+	define: TO_LINUX
 	compiler: gcc
+	set-env CMAKE_GEN: ""
+	cflags: -fvisibility=hidden
 ]
 
+define: ENDIAN_LITTLE
+;; Selects the amalgamated `rebol-extension.h` in the generated header.
+define: REB_EXT
+
 target-x86: [
+	;- On linux needs:  sudo apt install gcc-multilib g++-multilib
 	arch: x86
+	set ARCH_NAME: "x86"
+	set SISKIN_INSTALL_PREFIX: "$SISKIN_INSTALL/$INSTALL_SUFFIX/x86"
+	#if macOS?   [ fail "It is not possible to make 32bit build on macos" ]
+	#if Posix?   [
+		set CMAKE_ARCH: "-DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32"
+	]
+	#if Windows? [
+		flags: "-arch x86_64"
+		set CMAKE_ARCH: "-A Win32"
+	]
 ]
 target-x64: [
 	arch: x64
+	set ARCH_NAME: "x64"
+	set SISKIN_INSTALL_PREFIX: "$SISKIN_INSTALL/$INSTALL_SUFFIX/x64"
 	defines: [
 		_FILE_OFFSET_BITS=64
-		__LP64__       ; has long (integer) 64 bits
+		__LP64__ ; has long (integer) 64 bits
 	]
-	#if macOS?   [ flag: "-arch x86_64" ]
+	#if Windows? [ set CMAKE_ARCH: "-A x64" ]
+	#if Posix?   [ set CMAKE_ARCH: ""]
+	#if macOS?   [
+		flags: ["-arch x86_64"]
+		set CMAKE_ARCH: [
+			"-DCMAKE_OSX_SYSROOT=macosx"
+			"-DCMAKE_OSX_ARCHITECTURES=x86_64"
+			"-DCMAKE_APPLE_SILICON_PROCESSOR=x86_64" ;; make CMake treat the build as x86_64, not the arm64 host
+			"-DCMAKE_OSX_DEPLOYMENT_TARGET=10.9"
+		]
+	]
 ]
 target-arm64: [
 	arch: arm64
-	#if Linux? [
-		flag: "-arch arm64"
-	]
-	#if macOS? [
-		flag: "-target arm64-apple-darwin"
-	]
+	set ARCH_NAME: "arm64"
+	set SISKIN_INSTALL_PREFIX: "$SISKIN_INSTALL/$INSTALL_SUFFIX/arm64"
 	define: _FILE_OFFSET_BITS=64
-	define: __LP64__   ; has long (integer) 64 bits
+	define: __LP64__ ; has long (integer) 64 bits
 	define: __arm64__
-]
-target-armv7: [
-	arch: armv7
-	flag: "-march=armv7"
+	#if Posix? [
+		#either macOS? [
+			flags: "-target arm64-apple-darwin"
+			set CMAKE_ARCH: [
+				"-DCMAKE_OSX_SYSROOT=macosx"
+				"-DCMAKE_OSX_ARCHITECTURES=arm64"
+				"-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0"
+			]
+		][
+			;- Needs:  sudo apt install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+			set CMAKE_ARCH: [
+				"-DCMAKE_SYSTEM_NAME=Linux"
+				"-DCMAKE_SYSTEM_PROCESSOR=aarch64"
+				"-DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc"
+				"-DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++"
+			]
+		]
+	]
+	#if Windows? [
+		set CMAKE_ARCH: "-A arm64"
+	]
 ]
 ;----------------------------------------------------------------
 
 
+;----------------------------------------------------------------
+;- extension sources are built out of the Rebol tree -------------
+;; Selects the amalgamated `rebol-extension.h` in the generated header.
+define: REB_EXT
+
 r3-extension: [
-	flags:  shared
-	include: %libdeflate/lib
-	include: %libdeflate
+	flags: shared
+	strip: on
 	source: %src/
-
-	strip:  on
-
-	files: [
+	include: %$SISKIN_INSTALL_PREFIX/include/
+	library: %$SISKIN_INSTALL_PREFIX/lib/
+	files: only [
+		%deflate.c
 		%deflate-commands.c
-		%deflate-commands-table.c
-		%deflate-rebol-extension.c
+		%gen-deflate.c
 	]
 	#if macOS? [
-		lflags:  [-dynamiclib]
-		flag:    -mmacosx-version-min=10.9
 		compiler: clang
+		lflag:  "-dynamiclib"
+		cflag:  "-mmacosx-version-min=10.9"
+		;; Export only the extension entry points.
+		lflag: "-Wl,-exported_symbol,_RX_Init -Wl,-exported_symbol,_RX_Quit -Wl,-exported_symbol,_RX_Call -Wl,-exported_symbol,_RX_Abi"
+		lflag: "-Wl,-dead_strip"
 	]
 	#if Posix? [
 		cflags: [-fPIC -pthread]
 		libraries: [%pthread]
 	]
+	#if Linux? [
+		lflag: "-Wl,--exclude-libs,ALL"
+		lflag: "-Wl,--gc-sections"
+		;; Fail at link time on a missing symbol, not at load time.
+		lflag: "-Wl,--no-undefined"
+	;	library: %dl
+		library: %pthread
+	]
 	#if Windows? [
 		upx: on
 	]
-	;- generate main extension header --------------------------------
-	do %src/deflate-rebol-extension.r3 
+	;- generate the extension header and command table -------------
+	;; Produces %src/gen-deflate.h and %src/gen-deflate.c, and refreshes
+	;; %README.md's reference section (make-extension.r3 0.7.0+ only
+	;; touches the README when --readme is passed).
+	do %make-extension.r3 [%src/deflate.reb --readme]
 ]
 
-deflate-src: [
-	source:  %libdeflate/lib/
-	files: [
-		%adler32.c
-		%crc32.c
-		%deflate_compress.c
-		%deflate_decompress.c
-		%gzip_compress.c
-		%gzip_decompress.c
-		%utils.c
-		%zlib_compress.c
-		%zlib_decompress.c
-		;%x86/cpu_features.c
-		;%arm/cpu_features.c
+link-static: [
+	set CMAKE_LINK: [
+		"-DLIBDEFLATE_BUILD_STATIC_LIB=ON"
+		"-DLIBDEFLATE_BUILD_SHARED_LIB=OFF"
 	]
+	set INSTALL_SUFFIX: "static"
+	set DIR_SUFFIX: ""
+	;; libdeflate names its static library differently on Windows.
+	#either windows? [
+		library: %deflatestatic
+	][	library: %deflate]
+]
+link-shared: [
+	set CMAKE_LINK: [
+		"-DLIBDEFLATE_BUILD_STATIC_LIB=OFF"
+		"-DLIBDEFLATE_BUILD_SHARED_LIB=ON"
+	]
+	set INSTALL_SUFFIX: "shared"
+	set DIR_SUFFIX: "-shared"
+	library: %deflate
+]
+
+cmake-build: [
+	set CMAKE_COMMON: [
+		"-DCMAKE_BUILD_TYPE=Release"
+		"-DCMAKE_VERBOSE_MAKEFILE=OFF"
+		;; The static library is linked into the shared .rebx.
+		"-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+		"-DLIBDEFLATE_BUILD_GZIP=OFF"
+		"-DLIBDEFLATE_BUILD_TESTS=OFF"
+		"-DCMAKE_INSTALL_PREFIX=$SISKIN_INSTALL_PREFIX"
+	;- Above defined based on target
+		"$CMAKE_ARCH"
+		"$CMAKE_LINK"
+
+	]
+	cmd "cmake --fresh -B $SISKIN_TEMP/libdeflate-$ARCH_NAME$DIR_SUFFIX $CMAKE_GEN -S libdeflate $CMAKE_COMMON"
+	cmd "cmake --build    $SISKIN_TEMP/libdeflate-$ARCH_NAME$DIR_SUFFIX --config release -j 8"
+	cmd "cmake --install  $SISKIN_TEMP/libdeflate-$ARCH_NAME$DIR_SUFFIX --config release"
 ]
 
 eggs: [
-	#if Windows? [
-		"Make deflate static library (cmake) - x86" [
-			arch: x86
-			name: %static-lib-x86
-			cmd %_static_x86/ "cmake ../libdeflate/ -A Win32 -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF"
-			cmd %_static_x86/ {cmake --build . --config release -j 8}
-		]
-		"Make deflate static library (cmake) - x64" [
-			arch: x64
-			name: %static-lib-x64
-			cmd %_static_x64/ "cmake ../libdeflate/ -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF"
-			cmd %_static_x64/ {cmake --build . --config release -j 8}
-		]
-		"Make deflate static library (cmake) - arm64" [
-			arch: arm64
-			name: %static-lib-arm64
-			cmd %_static_arm64/ "cmake ../libdeflate/ -A ARM64 -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF"
-			cmd %_static_arm64/ {cmake --build . --config release -j 8}
-		]
-		"Rebol deflate extension: win32_x86" [
-			name: %deflate-windows-x86
-			:target-x86
-			:r3-extension
-			:deflate-src
-			file: %x86/cpu_features.c
-		]
-		"Rebol deflate extension: win32_x64" [
-			name: %deflate-windows-x64
-			:target-x64
-			:r3-extension
-			:deflate-src
-			file: %x86/cpu_features.c
-		]
-		"Rebol deflate extension: arm64" [
-			name: %deflate-windows-arm64
-			:target-arm64
-			:r3-extension
-			:deflate-src
-			file: %arm/cpu_features.c
-		]
+	"Cmake libdeflate static - x86"  [ name: %cmake-deflate-x86          :link-static :target-x86   :cmake-build ]
+	"Cmake libdeflate static - x64"  [ name: %cmake-deflate-x64          :link-static :target-x64   :cmake-build ]
+	"Cmake libdeflate static - arm64"[ name: %cmake-deflate-arm64        :link-static :target-arm64 :cmake-build ]
+	"Cmake libdeflate shared - x86"  [ name: %cmake-deflate-shared-x86   :link-shared :target-x86   :cmake-build ]
+	"Cmake libdeflate shared - x64"  [ name: %cmake-deflate-shared-x64   :link-shared :target-x64   :cmake-build ]
+	"Cmake libdeflate shared - arm64"[ name: %cmake-deflate-shared-arm64 :link-shared :target-arm64 :cmake-build ]
+
+	"Rebol Deflate static extension: x86" [
+		name: %deflate-x86
+		:link-static :target-x86 :r3-extension
 	]
-	#if macOS? [
-		"Rebol deflate extension: macos_x64" [
-			name: %deflate-macos-x64
-			:r3-extension
-			:deflate-src
-			:target-x64
-			file: %x86/cpu_features.c
-		]
-		"Rebol deflate extension: macos_arm64" [
-			name: %deflate-macos-arm64
-			:r3-extension
-			:deflate-src
-			:target-arm64
-			file: %arm/cpu_features.c
-		]
+	"Rebol Deflate static extension: x64" [
+		name: %deflate-x64
+		:link-static :target-x64 :r3-extension
 	]
-	#if Linux? [
-		"Make deflate static library (cmake) - x64" [
-			arch: x64
-			name: %static-lib-x64
-			cmd %_static_nix_x64/ "cmake ../libdeflate/ -DLIBDEFLATE_BUILD_SHARED_LIB=OFF -DLIBDEFLATE_BUILD_STATIC_LIB=ON -DCMAKE_VERBOSE_MAKEFILE=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
-			cmd %_static_nix_x64/ {cmake --build . --config release -j 8}
-		]
-		"Rebol deflate extension: linux_x86" [
-			name: %deflate-linux-x86
-			:r3-extension
-			:deflate-src
-			:target-x86
-			file: %x86/cpu_features.c
-		]
-		"Rebol deflate extension: linux_x64" [
-			name: %deflate-linux-x64
-			:r3-extension
-			:deflate-src
-			:target-x64
-			file: %x86/cpu_features.c
-		]
-		"Rebol deflate extension: linux_arm64" [
-			name: %deflate-linux-arm64
-			:r3-extension
-			:deflate-src
-			:target-arm64
-			file: %arm/cpu_features.c
-		]
+	"Rebol Deflate static extension: arm64" [
+		name: %deflate-arm64
+		:link-static :target-arm64 :r3-extension
+	]
+
+	"Rebol Deflate shared extension: x86" [
+		name: %deflate-shared-x86
+		:link-shared :target-x86 :r3-extension
+	]
+	"Rebol Deflate shared extension: x64" [
+		name: %deflate-shared-x64
+		:link-shared :target-x64 :r3-extension
+	]
+	"Rebol Deflate shared extension: arm64" [
+		name: %deflate-shared-arm64
+		:link-shared :target-arm64 :r3-extension
 	]
 ]
-

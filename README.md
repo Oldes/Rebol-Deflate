@@ -50,3 +50,12 @@ Decompress data using Deflate
 * `/zlib` Assumes the zlib wrapper format
 * `/gzip` Assumes the gzip wrapper format
 
+
+## Other extension values:
+```rebol
+attempt [
+	unless find system/schemes/http/headers/Accept-Encoding "deflate" [
+		append system/schemes/http/headers/Accept-Encoding ",deflate"
+	]
+]
+```
