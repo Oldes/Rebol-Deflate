@@ -71,18 +71,18 @@ commands: [
 		/part                      "Limit the input data to a given length."
 		 length [integer!]         "Length of input data."
 		/level quality [integer!]  "Compression level from 0 (no compression) to 12 (default is 6)."
-		/zlib "Assumes the zlib wrapper format"
-		/gzip "Assumes the gzip wrapper format"
+		/zlib "Use the zlib wrapper format"
+		/gzip "Use the gzip wrapper format (wins over /zlib)"
 	]
 	decompress: [
 		"Decompress data using Deflate"
 		data [binary! any-string!] "Input data to decompress."
 		/part                      "Limit the input data to a given length."
 		 length [integer!]         "Length of input data."
-		/size                      "Limit the output size."
-		 bytes [integer!]          "Maximum number of uncompressed bytes."
+		/size                      "Limit the output size (the data are still fully decompressed first)."
+		 bytes [integer!]          "Maximum number of uncompressed bytes; longer output is cut."
 		/zlib "Assumes the zlib wrapper format"
-		/gzip "Assumes the gzip wrapper format"
+		/gzip "Assumes the gzip wrapper format (wins over /zlib)"
 	]
 ]
 
