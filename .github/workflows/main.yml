@@ -11,65 +11,143 @@ on:
 
 jobs:
   windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Install Siskin Builder
-      uses: oldes/install-siskin@v0.21.0
+      uses: oldes/install-siskin@v0.23.2
 
+    - name: Set Siskin locations
+      shell: bash
+      run: |
+        tee -a "$GITHUB_ENV" <<EOF
+        SISKIN_TEMP=$RUNNER_TEMP/siskin
+        SISKIN_INSTALL=$GITHUB_WORKSPACE/deps
+        REBOL_MODULES_DIR=$GITHUB_WORKSPACE
+        EOF
+
+    - name: Build 64bit static Deflate library
+      run: ./siskin Rebol-Deflate.nest cmake-deflate-x64
     - name: Build 64bit Rebol/Deflate extension
-      run: ./siskin Rebol-Deflate.nest -o ./deflate-windows-x64.rebx --msvc deflate-windows-x64
-
+      run: ./siskin Rebol-Deflate.nest -o ./deflate-windows-x64.rebx --msvc deflate-x64
     - name: Minimal Rebol/Deflate extension test
       run:  ./siskin --script ci-test.r3
 
-    - uses: actions/upload-artifact@v4
+    - name: Build 32bit static Deflate library
+      run: ./siskin Rebol-Deflate.nest cmake-deflate-x86
+    - name: Build 32bit Rebol/Deflate extension
+      run: ./siskin Rebol-Deflate.nest -o ./deflate-windows-x86.rebx --msvc deflate-x86
+
+    - name: Build arm64 static Deflate library
+      run: ./siskin Rebol-Deflate.nest cmake-deflate-arm64
+    - name: Build arm64 Rebol/Deflate extension
+      run: ./siskin Rebol-Deflate.nest -o ./deflate-windows-arm64.rebx --msvc deflate-arm64
+
+    - uses: actions/upload-artifact@v6
       with:
         name: Rebol-Deflate-Windows-CI-${{github.run_id}}
         path: ./*.rebx
+
 
   linux:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Install Siskin Builder
-      uses: oldes/install-siskin@v0.21.0
+      uses: oldes/install-siskin@v0.23.2
 
+    - name: Set Siskin locations
+      shell: bash
+      run: |
+        tee -a "$GITHUB_ENV" <<EOF
+        SISKIN_TEMP=$RUNNER_TEMP/siskin
+        SISKIN_INSTALL=$GITHUB_WORKSPACE/deps
+        REBOL_MODULES_DIR=$GITHUB_WORKSPACE
+        EOF
+
+    - name: Build 64bit static Deflate library
+      run: ./siskin Rebol-Deflate.nest cmake-deflate-x64
     - name: Build 64bit Rebol/Deflate extension
-      run: ./siskin Rebol-Deflate.nest -o ./deflate-linux-x64.rebx --gzip deflate-linux-x64
-
+      run: ./siskin Rebol-Deflate.nest -o ./deflate-linux-x64.rebx --gzip deflate-x64
     - name: Minimal Rebol/Deflate extension test
       run:  ./siskin --script ci-test.r3
 
-    - uses: actions/upload-artifact@v4
+    - name: Prepare 32bit gcc
+      run: sudo apt install gcc-multilib g++-multilib
+    - name: Build 32bit static Deflate library
+      run: ./siskin Rebol-Deflate.nest cmake-deflate-x86
+    - name: Build 32bit Rebol/Deflate extension
+      run: ./siskin Rebol-Deflate.nest -o ./deflate-linux-x86.rebx --gzip deflate-x86
+
+    - uses: actions/upload-artifact@v6
       with:
         name: Rebol-Deflate-Linux-CI-${{github.run_id}}
         path: ./*.gz
 
-  macos:
+  macos-arm:
     runs-on: macos-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Install Siskin Builder
-      uses: oldes/install-siskin@v0.21.0
+      uses: oldes/install-siskin@v0.23.2
+      with:
+        arch: aarch64
 
-    - name: Build AMD64 Rebol/Deflate extension
-      run: ./siskin Rebol-Deflate.nest -o ./deflate-macos-x64.rebx --gzip deflate-macos-x64
+    - name: Set Siskin locations
+      shell: bash
+      run: |
+        tee -a "$GITHUB_ENV" <<EOF
+        SISKIN_TEMP=$RUNNER_TEMP/siskin
+        SISKIN_INSTALL=$GITHUB_WORKSPACE/deps
+        REBOL_MODULES_DIR=$GITHUB_WORKSPACE
+        EOF
 
-    - name: Build ARM64 Rebol/Deflate extension
-      run: ./siskin Rebol-Deflate.nest -o ./deflate-macos-arm64.rebx --gzip deflate-macos-arm64
+    - name: Build arm64 static Deflate library
+      run: ./siskin Rebol-Deflate.nest cmake-deflate-arm64
+
+    - name: Build arm64 Rebol/Deflate extension
+      run: ./siskin Rebol-Deflate.nest -o ./deflate-macos-arm64.rebx --gzip deflate-arm64
 
     - name: Minimal Rebol/Deflate extension test
       run:  ./siskin --script ci-test.r3
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v6
       with:
-        name: Rebol-Deflate-macOS-CI-${{github.run_id}}
+        name: Rebol-Deflate-macOS-arm-CI-${{github.run_id}}
         path: ./*.gz
 
+  macos-x64:
+    runs-on: macos-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+
+    - name: Install Siskin Builder
+      uses: oldes/install-siskin@v0.23.2
+
+    - name: Set Siskin locations
+      shell: bash
+      run: |
+        tee -a "$GITHUB_ENV" <<EOF
+        SISKIN_TEMP=$RUNNER_TEMP/siskin
+        SISKIN_INSTALL=$GITHUB_WORKSPACE/deps
+        REBOL_MODULES_DIR=$GITHUB_WORKSPACE
+        EOF
+
+    - name: Build x64 static Deflate library
+      run: ./siskin Rebol-Deflate.nest cmake-deflate-x64
+    - name: Build x64 Rebol/Deflate extension
+      run: ./siskin Rebol-Deflate.nest -o ./deflate-macos-x64.rebx --gzip deflate-x64
+    - name: Minimal Rebol/Deflate extension test
+      run:  ./siskin --script ci-test.r3
+
+    - uses: actions/upload-artifact@v6
+      with:
+        name: Rebol-Deflate-macOS-x64-CI-${{github.run_id}}
+        path: ./*.gz
