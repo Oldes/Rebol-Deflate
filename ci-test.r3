@@ -79,6 +79,44 @@ either all [
     ++ errors
 ]
 
+print as-yellow "Decompress with /size (maximum output size)."
+bin: deflate/compress data
+foreach [name size expected] reduce [
+    "exact size"    (length? data)       (length? data)
+    "larger limit"  (2 * length? data)   (length? data)
+    "smaller limit" 100                  100
+    "tiny limit"    1                    1
+    "zero limit"    0                    0
+][
+    either all [
+        res: attempt [deflate/decompress/size bin size]
+        expected = length? res
+        equal? res copy/part data expected
+    ][
+        print ["  ok:" name]
+    ][
+        print [as-red "Failed to decompress with /size:" name]
+        ++ errors
+    ]
+]
+;; the same for the zlib and gzip wrappers
+either all [
+    equal? data deflate/decompress/zlib/size deflate/compress/zlib data (length? data) + 10
+    equal? data deflate/decompress/gzip/size deflate/compress/gzip data (length? data) + 10
+][
+    print "  ok: zlib and gzip"
+][
+    print [as-red "Failed to decompress zlib/gzip with /size."]
+    ++ errors
+]
+;; tiny input must not hang while growing the output
+either equal? "X" to string! deflate/decompress deflate/compress "X" [
+    print "  ok: tiny input"
+][
+    print [as-red "Failed with tiny input."]
+    ++ errors
+]
+
 print as-yellow "Using short input..."
 short-text: "X"
 for quality 1 9 1 [

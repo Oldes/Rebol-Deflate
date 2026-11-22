@@ -160,17 +160,19 @@ static int DecompressCommon(deflate_mode_t mode, const REBYTE *input, REBLEN len
 	if (out_len > MAX_I32) out_len = MAX_I32;
 	*output = RL_MAKE_BINARY((REBLEN)out_len);
 
-	if (limit != NO_LIMIT) {
-		out_bytes = limit;
-		result = h->decompress(ctx, input, len, BIN_HEAD(*output), out_bytes, NULL);
-	} else {
-retry:
+	// libdeflate cannot stop in the middle of a stream, so the data are
+	// always decompressed as a whole (growing the output as needed) and
+	// the result is cut to the requested limit afterwards.
+	// The limit is used only as the initial size of the output buffer.
+	while (TRUE) {
 		result = h->decompress_ex(ctx, input, len, BIN_HEAD(*output), SERIES_REST(*output), &in_bytes, &out_bytes);
-		if (result == LIBDEFLATE_INSUFFICIENT_SPACE) {
-			SERIES_TAIL(*output) = SERIES_REST(*output);
-			RL_EXPAND_SERIES(*output, AT_TAIL, len >> 1);
-			goto retry;
+		if (result != LIBDEFLATE_INSUFFICIENT_SPACE) break;
+		if (SERIES_REST(*output) >= MAX_I32) {
+			libdeflate_free_decompressor(ctx);
+			return FALSE;
 		}
+		SERIES_TAIL(*output) = SERIES_REST(*output);
+		RL_EXPAND_SERIES(*output, AT_TAIL, SERIES_REST(*output)); // double the size
 	}
 
 	if (result > 0) {
