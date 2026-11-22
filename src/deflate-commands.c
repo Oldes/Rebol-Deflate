@@ -236,7 +236,7 @@ COMMAND cmd_deflate_compress(RXIFRM *frm, void *ctx) {
 
 	if (ref_part) length = (REBLEN)MAX(0, MIN(length, RXA_INT64(frm, 3)));
 
-	if (!CompressCommon(mode, (const REBYTE*)BIN_SKIP(data, index), length, (REBCNT)level, &output, &error)) {
+	if (!CompressCommon(mode, (const REBYTE*)BIN_SKIP(data, index), length, (REBCNT)MAX(0, level), &output, &error)) {
 		RETURN_ERROR(ERR_NO_COMPRESS);
 	}
 

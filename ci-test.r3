@@ -79,6 +79,32 @@ either all [
     ++ errors
 ]
 
+print as-yellow "Compression levels outside of the 1-9 range."
+foreach level [-5 0 10 11 12 99][
+    either all [
+        bin: attempt [deflate/compress/level data level]
+        equal? data deflate/decompress bin
+    ][
+        print ["  level:" level "^-compressed size:" length? bin]
+    ][
+        print [as-red "Failed to compress using level:" level]
+        ++ errors
+    ]
+]
+;; levels 10-12 must not be worse than 9 and 0 must only store the data
+size-of: func [level][length? deflate/compress/level data level]
+either all [
+    (size-of 12) <= size-of 9
+    (size-of 0)  >= length? data
+    (size-of -5)  = size-of 0     ;; negative level is clamped to 0
+    (size-of 99)  = size-of 12    ;; too high level is clamped to 12
+][
+    print "  ok: level limits"
+][
+    print [as-red "Unexpected sizes for levels 0, 12 or out of range."]
+    ++ errors
+]
+
 print as-yellow "Decompress with /size (maximum output size)."
 bin: deflate/compress data
 foreach [name size expected] reduce [
