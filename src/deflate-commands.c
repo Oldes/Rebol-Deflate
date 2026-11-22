@@ -105,6 +105,9 @@ static const deflate_handlers_t handlers[] = {
 
 //== de/compression ============================================================
 
+/* Default level used when /level is not specified (same as zlib's default). */
+#define DEFLATE_DEFAULT_LEVEL 6
+
 // Unified compression
 static int CompressCommon(deflate_mode_t mode, const REBYTE *input, REBLEN len, REBCNT level, REBSER **output, REBINT *error) {
 	struct libdeflate_compressor *ctx;
@@ -219,7 +222,7 @@ COMMAND cmd_deflate_compress(RXIFRM *frm, void *ctx) {
 	REBINT index    = RXA_INDEX(frm, 1);
 	REBFLG ref_part = RXA_REF(frm, 2);
 	REBLEN length   = SERIES_TAIL(data) - index;
-	REBINT level    = RXA_REF(frm, 4) ? RXA_INT32(frm, 5) : 0;
+	REBINT level    = RXA_REF(frm, 4) ? RXA_INT32(frm, 5) : DEFLATE_DEFAULT_LEVEL;
 	REBFLG ref_zlib = RXA_REF(frm, 6);
 	REBFLG ref_gzip = RXA_REF(frm, 7);
 	REBSER *output  = NULL;

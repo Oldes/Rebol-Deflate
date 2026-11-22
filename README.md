@@ -36,7 +36,7 @@ Compress data using Deflate
 * `/part` Limit the input data to a given length.
 * `length` `[integer!]` Length of input data.
 * `/level`
-* `quality` `[integer!]` Compression level from 1 to 9.
+* `quality` `[integer!]` Compression level from 1 to 9 (default is 6).
 * `/zlib` Assumes the zlib wrapper format
 * `/gzip` Assumes the gzip wrapper format
 

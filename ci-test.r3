@@ -65,6 +65,20 @@ for quality 1 9 1 [
     ]
 ]
 
+print as-yellow "Default compression level (without /level)."
+bin-default: deflate/compress data
+bin-level6:  deflate/compress/level data 6
+either all [
+    equal? data deflate/decompress bin-default
+    (length? bin-default) < length? data    ;; must really compress, not only store
+    equal? bin-default bin-level6           ;; default is level 6
+][
+    print ["  default size:" length? bin-default]
+][
+    print [as-red "Default compression level is not 6! sizes:" length? bin-default length? bin-level6]
+    ++ errors
+]
+
 print as-yellow "Using short input..."
 short-text: "X"
 for quality 1 9 1 [
